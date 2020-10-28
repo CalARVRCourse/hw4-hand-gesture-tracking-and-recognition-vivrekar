@@ -73,6 +73,53 @@ while True:
 
     frame = skin  # (Part 1)
 
+    # Part 2 : Processing the hand image with connected component analysis [5 pts]
+    # (Part 2) threshold and binarize the image
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+
+    # (Part 2) Connected components
+    ret, markers, stats, centroids = cv2.connectedComponentsWithStats(thresh, ltype=cv2.CV_16U)
+    markers = np.array(markers, dtype=np.uint8)
+    label_hue = np.uint8(179*markers/np.max(markers))
+    blank_ch = 255*np.ones_like(label_hue)
+    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
+    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
+    labeled_img[label_hue == 0] = 0
+
+    # (Part 2) ROI
+    statsSortedByArea = stats[np.argsort(stats[:, 4])]
+
+    if (ret > 2):
+        try:
+            # (Part 2) ROI (continued)
+            roi = statsSortedByArea[-3][0:4]
+            x, y, w, h = roi
+            subImg = labeled_img[y:y+h, x:x+w]
+            subImg = cv2.cvtColor(subImg, cv2.COLOR_BGR2GRAY)
+
+            # (Part 2) Find contours in the ring and fit an ellipse
+            _, contours, _ = cv2.findContours(subImg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            maxCntLength = 0
+            for i in range(0, len(contours)):
+                cntLength = len(contours[i])
+                if(cntLength > maxCntLength):
+                    cnt = contours[i]
+                    maxCntLength = cntLength
+            if(maxCntLength >= 5):
+                # (Part 2) Fit ellipse and get ellipse parameters
+                ellipseParam = cv2.fitEllipse(cnt)
+                (x, y), (MA, ma), angle = ellipseParam
+                print('======================\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n======================' % (x, y, MA, ma, angle))
+                subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB)
+                subImg = cv2.ellipse(subImg, ellipseParam, (0, 255, 0), 2)
+
+            subImg = cv2.resize(subImg, (0, 0), fx=3, fy=3)
+            cv2.imshow("ROI "+str(2), subImg)
+            cv2.waitKey(1)
+        except:
+            print("No hand found")
+
     # convert to grayscale
     if isColor == False:
         src_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -91,7 +138,7 @@ while True:
         blur = cv2.GaussianBlur(dst, (blur_value, blur_value), 0)
         output = blur
 
-    cv2.imshow(window_name, output)
+    cv2.imshow(window_name, labeled_img)
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
