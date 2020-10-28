@@ -1,6 +1,7 @@
 from __future__ import print_function
 import cv2
 import argparse
+import numpy as np
 
 max_value = 255
 max_type = 4
@@ -16,7 +17,7 @@ def nothing(x):
     pass
 
 
-cam = cv2.VideoCapture(1)
+cam = cv2.VideoCapture(0)
 cv2.namedWindow(window_name)
 cv2.createTrackbar(trackbar_type, window_name, 3, max_type, nothing)
 # Create Trackbar to choose Threshold value
@@ -44,6 +45,34 @@ while True:
     isColor = (cv2.getTrackbarPos(color_switch, window_name) == 1)
     findContours = (cv2.getTrackbarPos('Contours', window_name) == 1)
 
+    # Part 1 : Extracting Hand from the feed [5 pts]
+    # (Part 1) Separation of skin color with HSV and YCbCr
+    lower_HSV = np.array([0, 40, 0], dtype="uint8")
+    upper_HSV = np.array([25, 255, 255], dtype="uint8")
+
+    convertedHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    skinMaskHSV = cv2.inRange(convertedHSV, lower_HSV, upper_HSV)
+
+    lower_YCrCb = np.array((0, 138, 67), dtype="uint8")
+    upper_YCrCb = np.array((255, 173, 133), dtype="uint8")
+
+    convertedYCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
+    skinMaskYCrCb = cv2.inRange(convertedYCrCb, lower_YCrCb, upper_YCrCb)
+
+    skinMask = cv2.add(skinMaskHSV, skinMaskYCrCb)
+
+    # (Part 1) Erosion and dialation transformations
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    skinMask = cv2.erode(skinMask, kernel, iterations=2)
+    skinMask = cv2.dilate(skinMask, kernel, iterations=2)
+
+    # blur the mask to help remove noise, then apply the
+    # mask to the frame
+    skinMask = cv2.GaussianBlur(skinMask, (3, 3), 0)
+    skin = cv2.bitwise_and(frame, frame, mask=skinMask)
+
+    frame = skin  # (Part 1)
+
     # convert to grayscale
     if isColor == False:
         src_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -63,6 +92,7 @@ while True:
         output = blur
 
     cv2.imshow(window_name, output)
+
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
         # exit
