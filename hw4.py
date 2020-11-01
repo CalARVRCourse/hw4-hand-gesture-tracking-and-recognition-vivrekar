@@ -76,7 +76,7 @@ while True:
     # Part 2 : Processing the hand image with connected component analysis [5 pts]
     # (Part 2) threshold and binarize the image
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)  # For Part 2
 
     # (Part 2) Connected components
     ret, markers, stats, centroids = cv2.connectedComponentsWithStats(thresh, ltype=cv2.CV_16U)
@@ -110,15 +110,46 @@ while True:
                 # (Part 2) Fit ellipse and get ellipse parameters
                 ellipseParam = cv2.fitEllipse(cnt)
                 (x, y), (MA, ma), angle = ellipseParam
-                print('======================\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n======================' % (x, y, MA, ma, angle))
+                print('======================\n**Part 2**\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n' % (x, y, MA, ma, angle))
                 subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB)
                 subImg = cv2.ellipse(subImg, ellipseParam, (0, 255, 0), 2)
 
             subImg = cv2.resize(subImg, (0, 0), fx=3, fy=3)
-            cv2.imshow("ROI "+str(2), subImg)
+            # cv2.imshow("ROI "+str(2), subImg)
             cv2.waitKey(1)
         except:
             print("No hand found")
+
+    # Part 3 : Tracking 2D finger positions
+    # (Part 3) repeating some part 2 without inversion
+    ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_OTSU)
+    thresholdedHandImage = thresh
+    # Part 3a: Processing the hand image with contour and hull analysis [5 pts]
+    if (ret > 2):
+        try:
+            _, contours, _ = cv2.findContours(thresholdedHandImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            contours = sorted(contours, key=cv2.contourArea, reverse=True)
+            thresholdedHandImage = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+            if len(contours) > 1:
+                largestContour = contours[0]
+                M = cv2.moments(largestContour)
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                print('**Part 3a**\ncX: %s\ncY: %s' % (cX, cY))
+                hull = cv2.convexHull(largestContour, returnPoints=False)
+                for cnt in contours[:1]:
+                    defects = cv2.convexityDefects(cnt, hull)
+                    if(not isinstance(defects, type(None))):
+                        for i in range(defects.shape[0]):
+                            s, e, f, d = defects[i, 0]
+                            start = tuple(cnt[s][0])
+                            end = tuple(cnt[e][0])
+                            far = tuple(cnt[f][0])
+                            cv2.line(thresholdedHandImage, start, end, [0, 255, 0], 2)
+                            cv2.circle(thresholdedHandImage, far, 5, [0, 0, 255], -1)
+        except:
+            print('no hand found')
+    cv2.imshow(window_name, thresholdedHandImage)
 
     # convert to grayscale
     if isColor == False:
@@ -138,7 +169,7 @@ while True:
         blur = cv2.GaussianBlur(dst, (blur_value, blur_value), 0)
         output = blur
 
-    cv2.imshow(window_name, labeled_img)
+    # cv2.imshow(window_name, labeled_img)
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
