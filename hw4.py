@@ -35,16 +35,14 @@ def ZoomOut():
     pyautogui.hotkey('command', '-')
 
 
-def RotateRight():
-    pyautogui.hotkey('command', 'R')
-
-
-def RotateLeft():
-    pyautogui.hotkey('command', 'R', presses=3)
+def Down(press=True):
+    if press:
+        pyautogui.press('down')
+    else:
+        pyautogui.keyUp('down')
 
 
 prevHullArea = 0
-prevAngle = 0
 counter = 0
 
 cam = cv2.VideoCapture(0)
@@ -205,17 +203,23 @@ while True:
             pass
     cv2.imshow(window_name, thresholdedHandImage)
 
+    # (Part 4) Simple Gesture #1: Scroll through VS Code based on fist or fingers
+    if fingerCount == 0:
+        Down(press=True)
+    else:
+        Down(press=False)
+
     # (Part 4) Complex Gesture #1: Zoom in and zoom out based on hand’s convex hull size
-    if isIncreased(hullArea, prevHullArea):
-        ZoomIn()
-    elif isDecreased(hullArea, prevHullArea):
-        ZoomOut()
-    prevHullArea = hullArea
+    # if isIncreased(hullArea, prevHullArea):
+    #     ZoomIn()
+    # elif isDecreased(hullArea, prevHullArea):
+    #     ZoomOut()
+    # prevHullArea = hullArea
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
         # exit
-        cv2.destroyAllWindows()][0]
+        cv2.destroyAllWindows()
         cam.release()
         break
 
