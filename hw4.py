@@ -110,7 +110,7 @@ while True:
                 # (Part 2) Fit ellipse and get ellipse parameters
                 ellipseParam = cv2.fitEllipse(cnt)
                 (x, y), (MA, ma), angle = ellipseParam
-                print('======================\n**Part 2**\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n' % (x, y, MA, ma, angle))
+                #print('======================\n**Part 2**\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n' % (x, y, MA, ma, angle))
                 subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB)
                 subImg = cv2.ellipse(subImg, ellipseParam, (0, 255, 0), 2)
 
@@ -118,13 +118,15 @@ while True:
             # cv2.imshow("ROI "+str(2), subImg)
             cv2.waitKey(1)
         except:
-            print("No hand found")
+            #print("No hand found")
+            pass
 
     # Part 3 : Tracking 2D finger positions
     # (Part 3) repeating some part 2 without inversion
     ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_OTSU)
     thresholdedHandImage = thresh
     # Part 3a: Processing the hand image with contour and hull analysis [5 pts]
+    fingerCount = 0
     if (ret > 2):
         try:
             _, contours, _ = cv2.findContours(thresholdedHandImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -135,7 +137,7 @@ while True:
                 M = cv2.moments(largestContour)
                 cX = int(M["m10"] / M["m00"])
                 cY = int(M["m01"] / M["m00"])
-                print('**Part 3a**\ncX: %s\ncY: %s' % (cX, cY))
+                #print('**Part 3a**\ncX: %s\ncY: %s' % (cX, cY))
                 hull = cv2.convexHull(largestContour, returnPoints=False)
                 for cnt in contours[:1]:
                     defects = cv2.convexityDefects(cnt, hull)
@@ -147,8 +149,26 @@ while True:
                             far = tuple(cnt[f][0])
                             cv2.line(thresholdedHandImage, start, end, [0, 255, 0], 2)
                             cv2.circle(thresholdedHandImage, far, 5, [0, 0, 255], -1)
+                    # Part 3b : Detecting fingers in the image [10 pts]
+                    for i in range(len(defects)):
+                        s, e, f, d = defects[i, 0]
+                        start = tuple(cnt[s][0])
+                        end = tuple(cnt[e][0])
+                        far = tuple(cnt[f][0])
+
+                        c_squared = (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2
+                        a_squared = (far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2
+                        b_squared = (end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2
+                        angle = np.arccos((a_squared + b_squared - c_squared) / (2 * np.sqrt(a_squared * b_squared)))
+                        # print(angle, np.pi / 3)
+                        if angle <= np.pi / 3:
+                            fingerCount += 1
+                            cv2.circle(thresholdedHandImage, far, 4, [0, 0, 255], -1)
+                    print("fingerCount: %s" % str(fingerCount))
+
         except:
-            print('no hand found')
+            #print('no hand found')
+            pass
     cv2.imshow(window_name, thresholdedHandImage)
 
     # convert to grayscale
@@ -160,7 +180,6 @@ while True:
             _, contours, hierarchy = cv2.findContours(blur, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             blur = cv2.cvtColor(blur, cv2.COLOR_GRAY2BGR)  # add this line
             output = cv2.drawContours(blur, contours, -1, (0, 255, 0), 1)
-            print(str(len(contours))+"\n")
         else:
             output = blur
 
