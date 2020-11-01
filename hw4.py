@@ -160,11 +160,13 @@ while True:
                         a_squared = (far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2
                         b_squared = (end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2
                         angle = np.arccos((a_squared + b_squared - c_squared) / (2 * np.sqrt(a_squared * b_squared)))
-                        # print(angle, np.pi / 3)
                         if angle <= np.pi / 3:
-                            fingerCount += 1
+                            if fingerCount:
+                                fingerCount += 1
+                            else:
+                                fingerCount += 2
                             cv2.circle(thresholdedHandImage, far, 4, [0, 0, 255], -1)
-                    print("fingerCount: %s" % str(fingerCount))
+            print("fingerCount: %s" % str(fingerCount))
 
         except:
             #print('no hand found')
