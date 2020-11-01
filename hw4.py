@@ -42,8 +42,13 @@ def Down(press=True):
         pyautogui.keyUp('down')
 
 
+def GoogleDocStrikethrough():
+    pyautogui.hotkey('command', 'shift', 'x')
+
+
 prevHullArea = 0
 counter = 0
+scissorDifference, prevScissorDifference = 0, 0
 
 cam = cv2.VideoCapture(0)
 cv2.namedWindow(window_name)
@@ -54,7 +59,6 @@ cv2.createTrackbar(trackbar_value, window_name, 0, max_value, nothing)
 cv2.createTrackbar(trackbar_blur, window_name, 1, 20, nothing)
 # create switch for ON/OFF functionality
 color_switch = 'Color'
-cv2.createTrackbar(color_switch, window_name, 0, 1, nothing)
 cv2.createTrackbar('Contours', window_name, 0, 1, nothing)
 while True:
     ret, frame = cam.read()
@@ -196,7 +200,10 @@ while True:
                             else:
                                 fingerCount += 2
                             cv2.circle(thresholdedHandImage, far, 4, [0, 0, 255], -1)
-            print("fingerCount: %s" % str(fingerCount))
+                    if fingerCount == 2:
+                        scissorDifference = abs(start[0] - end[0])
+                        print(scissorDifference)
+            #print("fingerCount: %s" % str(fingerCount))
 
         except:
             # print('no hand found')
@@ -204,10 +211,10 @@ while True:
     cv2.imshow(window_name, thresholdedHandImage)
 
     # (Part 4) Simple Gesture #1: Scroll through VS Code based on fist or fingers
-    if fingerCount == 0:
-        Down(press=True)
-    else:
-        Down(press=False)
+    # if fingerCount == 0:
+    #     Down(press=True)
+    # else:
+    #     Down(press=False)
 
     # (Part 4) Complex Gesture #1: Zoom in and zoom out based on hand’s convex hull size
     # if isIncreased(hullArea, prevHullArea):
@@ -215,6 +222,11 @@ while True:
     # elif isDecreased(hullArea, prevHullArea):
     #     ZoomOut()
     # prevHullArea = hullArea
+
+    # (Part 4) Complex Gesture #2: Strikethrough text by doing a scissor gesture
+    if prevScissorDifference > 20 and scissorDifference < 5:
+        GoogleDocStrikethrough()
+    prevScissorDifference = scissorDifference
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
