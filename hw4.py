@@ -2,6 +2,8 @@ from __future__ import print_function
 import cv2
 import argparse
 import numpy as np
+import pyautogui
+from scipy.spatial import ConvexHull
 
 max_value = 255
 max_type = 4
@@ -16,6 +18,34 @@ isColor = False
 def nothing(x):
     pass
 
+
+def isIncreased(value, prevValue, threshold=0):
+    return (value > prevValue + threshold)
+
+
+def isDecreased(value, prevValue, threshold=0):
+    return (value < prevValue - threshold)
+
+
+def ZoomIn():
+    pyautogui.hotkey('command', '+')
+
+
+def ZoomOut():
+    pyautogui.hotkey('command', '-')
+
+
+def RotateRight():
+    pyautogui.hotkey('command', 'R')
+
+
+def RotateLeft():
+    pyautogui.hotkey('command', 'R', presses=3)
+
+
+prevHullArea = 0
+prevAngle = 0
+counter = 0
 
 cam = cv2.VideoCapture(0)
 cv2.namedWindow(window_name)
@@ -116,7 +146,7 @@ while True:
 
             subImg = cv2.resize(subImg, (0, 0), fx=3, fy=3)
             # cv2.imshow("ROI "+str(2), subImg)
-            cv2.waitKey(1)
+            # cv2.waitKey(1)
         except:
             #print("No hand found")
             pass
@@ -139,6 +169,8 @@ while True:
                 cY = int(M["m01"] / M["m00"])
                 #print('**Part 3a**\ncX: %s\ncY: %s' % (cX, cY))
                 hull = cv2.convexHull(largestContour, returnPoints=False)
+                hullPoints = cv2.convexHull(largestContour, returnPoints=True)
+                hullArea = cv2.contourArea(hullPoints)
                 for cnt in contours[:1]:
                     defects = cv2.convexityDefects(cnt, hull)
                     if(not isinstance(defects, type(None))):
@@ -173,24 +205,12 @@ while True:
             pass
     cv2.imshow(window_name, thresholdedHandImage)
 
-    # convert to grayscale
-    if isColor == False:
-        src_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        _, dst = cv2.threshold(src_gray, threshold_value, max_binary_value, threshold_type)
-        blur = cv2.GaussianBlur(dst, (blur_value, blur_value), 0)
-        if findContours:
-            _, contours, hierarchy = cv2.findContours(blur, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            blur = cv2.cvtColor(blur, cv2.COLOR_GRAY2BGR)  # add this line
-            output = cv2.drawContours(blur, contours, -1, (0, 255, 0), 1)
-        else:
-            output = blur
-
-    else:
-        _, dst = cv2.threshold(frame, threshold_value, max_binary_value, threshold_type)
-        blur = cv2.GaussianBlur(dst, (blur_value, blur_value), 0)
-        output = blur
-
-    # cv2.imshow(window_name, labeled_img)
+    threshold = 0
+    if (isIncreased(hullArea, prevHullArea, threshold)):
+        ZoomIn()
+    elif (isDecreased(hullArea, prevHullArea, threshold)):
+        ZoomOut()
+    prevHullArea = hullArea
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
@@ -198,3 +218,5 @@ while True:
         cv2.destroyAllWindows()
         cam.release()
         break
+
+    counter += 1
