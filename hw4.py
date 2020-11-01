@@ -140,7 +140,7 @@ while True:
                 # (Part 2) Fit ellipse and get ellipse parameters
                 ellipseParam = cv2.fitEllipse(cnt)
                 (x, y), (MA, ma), angle = ellipseParam
-                #print('======================\n**Part 2**\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n' % (x, y, MA, ma, angle))
+                # print('======================\n**Part 2**\nx: %s\ny: %s\nMA: %s\nma: %s\nangle: %s\n' % (x, y, MA, ma, angle))
                 subImg = cv2.cvtColor(subImg, cv2.COLOR_GRAY2RGB)
                 subImg = cv2.ellipse(subImg, ellipseParam, (0, 255, 0), 2)
 
@@ -148,7 +148,7 @@ while True:
             # cv2.imshow("ROI "+str(2), subImg)
             # cv2.waitKey(1)
         except:
-            #print("No hand found")
+            # print("No hand found")
             pass
 
     # Part 3 : Tracking 2D finger positions
@@ -167,7 +167,7 @@ while True:
                 M = cv2.moments(largestContour)
                 cX = int(M["m10"] / M["m00"])
                 cY = int(M["m01"] / M["m00"])
-                #print('**Part 3a**\ncX: %s\ncY: %s' % (cX, cY))
+                # print('**Part 3a**\ncX: %s\ncY: %s' % (cX, cY))
                 hull = cv2.convexHull(largestContour, returnPoints=False)
                 hullPoints = cv2.convexHull(largestContour, returnPoints=True)
                 hullArea = cv2.contourArea(hullPoints)
@@ -201,21 +201,21 @@ while True:
             print("fingerCount: %s" % str(fingerCount))
 
         except:
-            #print('no hand found')
+            # print('no hand found')
             pass
     cv2.imshow(window_name, thresholdedHandImage)
 
-    threshold = 0
-    if (isIncreased(hullArea, prevHullArea, threshold)):
+    # (Part 4) Complex Gesture #1: Zoom in and zoom out based on hand’s convex hull size
+    if isIncreased(hullArea, prevHullArea):
         ZoomIn()
-    elif (isDecreased(hullArea, prevHullArea, threshold)):
+    elif isDecreased(hullArea, prevHullArea):
         ZoomOut()
     prevHullArea = hullArea
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
         # exit
-        cv2.destroyAllWindows()
+        cv2.destroyAllWindows()][0]
         cam.release()
         break
 
