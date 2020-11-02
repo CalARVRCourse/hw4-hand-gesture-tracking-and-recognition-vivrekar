@@ -42,6 +42,10 @@ def Down(press=True):
         pyautogui.keyUp('down')
 
 
+def TypeText(text):
+    pyautogui.typewrite(str(text))
+
+
 def GoogleDocStrikethrough():
     pyautogui.hotkey('command', 'shift', 'x')
 
@@ -49,6 +53,7 @@ def GoogleDocStrikethrough():
 prevHullArea = 0
 counter = 0
 scissorDifference, prevScissorDifference = 0, 0
+prevTotalFingerCount = 0
 
 cam = cv2.VideoCapture(0)
 cv2.namedWindow(window_name)
@@ -158,7 +163,6 @@ while True:
     ret, thresh = cv2.threshold(gray, 0, max_binary_value, cv2.THRESH_OTSU)
     thresholdedHandImage = thresh
     # Part 3a: Processing the hand image with contour and hull analysis [5 pts]
-    fingerCount = 0
     if (ret > 2):
         try:
             _, contours, _ = cv2.findContours(thresholdedHandImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -173,7 +177,9 @@ while True:
                 hull = cv2.convexHull(largestContour, returnPoints=False)
                 hullPoints = cv2.convexHull(largestContour, returnPoints=True)
                 hullArea = cv2.contourArea(hullPoints)
-                for cnt in contours[:1]:
+                totalFingerCount = 0
+                for cnt in contours[:2]:
+                    fingerCount = 0
                     defects = cv2.convexityDefects(cnt, hull)
                     if(not isinstance(defects, type(None))):
                         for i in range(defects.shape[0]):
@@ -202,8 +208,8 @@ while True:
                             cv2.circle(thresholdedHandImage, far, 4, [0, 0, 255], -1)
                     if fingerCount == 2:
                         scissorDifference = abs(start[0] - end[0])
-                        print(scissorDifference)
-            #print("fingerCount: %s" % str(fingerCount))
+                    totalFingerCount += fingerCount
+            # print("fingerCount: %s" % str(fingerCount))
 
         except:
             # print('no hand found')
@@ -224,9 +230,16 @@ while True:
     # prevHullArea = hullArea
 
     # (Part 4) Complex Gesture #2: Strikethrough text by doing a scissor gesture
-    if prevScissorDifference > 20 and scissorDifference < 5:
-        GoogleDocStrikethrough()
-    prevScissorDifference = scissorDifference
+    # if prevScissorDifference > 20 and scissorDifference < 5:
+    #     GoogleDocStrikethrough()
+    # prevScissorDifference = scissorDifference
+
+    # (Part 5) Two-hand calculator number-typing
+    if 0 <= totalFingerCount <= 10 and 0 <= prevTotalFingerCount <= 10:
+        if prevTotalFingerCount == 0 and totalFingerCount != 0:
+            TypeText(totalFingerCount)
+        if totalFingerCount == 0:
+            TypeText('c')
 
     k = cv2.waitKey(1)  # k is the key pressed
     if k == 27 or k == 113:  # 27, 113 are ascii for escape and q respectively
